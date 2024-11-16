@@ -1,0 +1,210 @@
+Lab 3 - Varun Thakur (ID: 6434134721)
+
+
+1. Find out, for each continent, the number of countries whose GNP is at least 100,000 and has at least 1 million people.
+
+
+Query:
+
+
+db.country.aggregate([{$match:{GNP:{$gte:100000},Population:{$gte:1000000}}},{$group:{ _id:"$Continent",numbOfCountries:{$sum: 1}}}])
+
+
+Output:
+
+
+[
+  { _id: 'Europe', numbOfCountries: 17 },
+  { _id: 'Oceania', numbOfCountries: 1 },
+  { _id: 'Asia', numbOfCountries: 11 },
+  { _id: 'North America', numbOfCountries: 3 },
+  { _id: 'Africa', numbOfCountries: 1 },
+  { _id: 'South America', numbOfCountries: 3 }
+]
+
+
+
+2. Find out how many districts (states) there are in the United States.
+
+
+Query:
+
+
+db.city.aggregate([{$match:{CountryCode: "USA"}},{$group:{_id: "$District"}},{$count:"Number Of Districts"}])
+
+
+Output:
+
+
+[ { 'Number Of Districts': 45 } ]
+
+
+
+
+3. Find out how many countries do not have capital cities, using the fact that the Capital field of
+such a country takes a value of 0.
+
+
+Query:
+
+
+db.country.aggregate([{$match:{Capital: 0}},{$count: "Number of Countries With No Capital Cities"}])
+
+
+Output:
+
+
+[ { 'Number of Countries With No Capital Cities': 7 } ]
+
+
+
+4. Find out how many countries do not have capital cities, using the fact that such countries do not join with any city (i.e., their capital city ID does not show up in the city collection).
+
+
+Query:
+
+
+db.country.aggregate([{$lookup:{from: "city", localField: "Capital", foreignField:"_id.ID", as:"capitalCity"}}, {$match:{capitalCity: {$eq:[]}}}, {$count:"Number of Countries With No Capital Cities"}])
+
+
+Output:
+
+
+[ { 'Number of Countries With No Capital Cities': 7 } ]
+
+
+
+5. Find out the top-10 countries ranked by the number of its cities whose population is more than 100,000. Return country code and the number of such cities only.
+
+
+Query:
+
+
+db.city.aggregate([{$match:{Population:{$gt:100000}}}, {$group:{ _id: "$CountryCode", numberOfCities: {$sum:1}}}, {$sort:{numberOfCities: -1 }}, {$limit: 10}, {$project: {_id: 0, countryCode: "$_id", numberOfCities: 1}}])
+
+
+Output:
+
+
+[
+  { numberOfCities: 341, countryCode: 'CHN' },
+  { numberOfCities: 310, countryCode: 'IND' },
+  { numberOfCities: 245, countryCode: 'USA' },
+  { numberOfCities: 226, countryCode: 'JPN' },
+  { numberOfCities: 216, countryCode: 'BRA' },
+  { numberOfCities: 166, countryCode: 'RUS' },
+  { numberOfCities: 153, countryCode: 'MEX' },
+  { numberOfCities: 117, countryCode: 'PHL' },
+  { numberOfCities: 83, countryCode: 'DEU' },
+  { numberOfCities: 68, countryCode: 'IDN' }
+]
+
+
+6. Find the most populated city in the United States, assuming there is only one such city. Return the city name and its population.
+
+
+Query:
+
+
+db.city.aggregate([{$match:{CountryCode:"USA"}},{$sort:{Population: -1 }},{$limit: 1},{$project:{Name: 1, Population: 1, _id: 0}}])
+
+
+Output:
+
+
+[ { Name: 'New York', Population: 8008278 } ]
+
+
+
+
+7. Find out which district (state) in the USA has the largest number of people (who live in the cities of the district). Assume there is only one such district. Output name of district and its total population.
+
+
+Query:
+
+
+db.city.aggregate([{$match:{CountryCode: "USA" }},{$group:{_id: "$District", totalPopulation:{$sum: "$Population"}}},{$sort:{totalPopulation: -1 }},{$limit: 1}, {$project: { _id: 0, districtState: "$_id", totalPopulation:1}}]) 
+
+
+Output:
+
+
+[ { totalPopulation: 16716706, districtState: 'California' } ]
+
+
+
+8. Find out countries which have English as one of their official languages and spoken by at least 90% of its population. Return the country code only.
+
+
+Query:
+
+
+db.countrylanguage.aggregate([{$match:{"_id.Language": "English", "IsOfficial": "T", "Percentage": {$gte: 90}}}, {$project:{"Country Code": "$_id.CountryCode", "_id": 0}}])
+
+
+Output:
+
+
+[
+  { 'Country Code': 'BMU' },
+  { 'Country Code': 'GBR' },
+  { 'Country Code': 'IRL' }
+]
+
+
+9. Find out languages spoken in the United States or Canada.
+
+
+Query:
+
+
+db.countrylanguage.aggregate([{$match:{$or:[{ "_id.CountryCode": "USA" },{"_id.CountryCode": "CAN"}]}}, {$group:{ _id: null, languages: {$addToSet: "$_id.Language"}}}, {$unwind: "$languages"}, {$sort:{"languages": 1}},{$project:{ _id: 0, language: "$languages"}}])
+
+
+Output:
+
+
+[
+  { language: 'Chinese' },
+  { language: 'Dutch' },
+  { language: 'English' },
+  { language: 'Eskimo Languages' },
+  { language: 'French' },
+  { language: 'German' },
+  { language: 'Italian' },
+  { language: 'Japanese' },
+  { language: 'Korean' },
+  { language: 'Polish' },
+  { language: 'Portuguese' },
+  { language: 'Punjabi' },
+  { language: 'Spanish' },
+  { language: 'Tagalog' },
+  { language: 'Ukrainian' },
+  { language: 'Vietnamese' }
+]
+
+
+
+10. Find out the countries whose GNP is greater than the GNP of China. Note you should first find
+GNP of China. Use two separate queries. Return the name of the country and its GNP.
+
+
+Queries:
+
+
+var gnp_China = db.country.find({Name:"China"},{GNP: 1,_id: 0}).toArray()[0].GNP
+
+db.country.find({GNP:{$gt:gnp_China}},{_id: 0, Name:1, GNP: 1}).sort({"GNP": -1})
+
+
+Output:
+
+
+[
+  { Name: 'United States', GNP: 8510700 },
+  { Name: 'Japan', GNP: 3787042 },
+  { Name: 'Germany', GNP: 2133367 },
+  { Name: 'France', GNP: 1424285 },
+  { Name: 'United Kingdom', GNP: 1378330 },
+  { Name: 'Italy', GNP: 1161755 }
+]
