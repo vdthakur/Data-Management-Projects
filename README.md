@@ -1,7 +1,7 @@
 # Data Management Repository Table of Contents
 
 
-## 2024 Spring for Varun Thakur
+## Varun Thakur
 
 This class covers various topics related to data management and storage systems. Below is an overview of the topics covered each week.
 
